@@ -1,0 +1,30 @@
+Finished tasks:
+T1
+T2
+T3
+T4
+T5 When the light toggle is on, please do not open the camera. If you want to use the camera,
+press L to close the light toggle first.(same as camera, do not open the light while using camera)
+
+(didn't do extra credit part)
+
+I think 1b isn't as complicated and hard as the 1a, genuinely I spend less time during implementation
+but more by understanding the math.
+
+Comments:
+Gouraud: doing all the math in VertexShader
+Phong: doing all the math in FragmentShader
+I used to calculate the normal vector for each vertex myself, but during the second tutorial
+Willi explained how normal vector works, I realize what I did was called flat shading and 
+it is wrong, the normal vectors should be as same as the vector of the vertecies. That is the reason
+I used the vertPosition in my calculation.
+
+The whole specular and diffuse concepts are used from the book. 
+Since the cone are not ideal for this lab, you can also import OBJ file to see the shading.
+
+
+
+OS of dev-computer: windows (DELL XPS)
+OS of test-computer: windows (Asus)
+browsers: Chrome 86.0.4240.111 64 bit
+

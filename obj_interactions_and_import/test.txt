@@ -1,0 +1,305 @@
+//import { glMatrix } from "./toji-gl-matrix-6c0268c/src";
+
+var Initializer = function () {
+    var canvas = document.getElementById('surface');
+    var gl = canvas.getContext('webgl');
+
+    if (!gl) {
+        console.log('shit aint working')
+    }
+    gl.clearColor(0, 0, 0, 1);//setting color//alpha value always 1
+    gl.clear(gl.COLOR_BUFFER_BIT);//perform color paint
+
+    //set shader source
+    const vertexShaderSource =
+        'attribute vec3 vertPosition; \n' +
+        'attribute vec4 vertColor; \n' +
+        'varying lowp vec4 fragColor; \n' +
+        'uniform mat4 worldMatrix; \n' +
+        'uniform mat4 viewMatrix; \n' +
+        'uniform mat4 projectionMatrix; \n' +
+        'void main(){\n' +
+        'fragColor = vertColor; \n' +
+        'gl_Position= projectionMatrix * viewMatrix * worldMatrix * vec4(vertPosition, 1);\n' +
+        '}';
+
+    const fragmentShaderSource =
+        'varying lowp vec4 fragColor;\n' + //dont understand why its lowp
+        'void main(){ \n' +
+        'gl_FragColor = fragColor;\n' +
+        '}';
+
+    //load shader set up--can be define as a function later to make it more generic
+    const vs = gl.createShader(gl.VERTEX_SHADER);
+    const fs = gl.createShader(gl.FRAGMENT_SHADER);
+    gl.shaderSource(fs, fragmentShaderSource);
+    gl.shaderSource(vs, vertexShaderSource);
+    gl.compileShader(vs);
+    if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+        console.log('Vertex shader ERROR', gl.getShaderInfoLog(vs));
+        return;
+    }
+    gl.compileShader(fs);
+    if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+        console.log('Fragment shader ERROR', gl.getShaderInfoLog(fs));
+        return;
+    }
+
+    //combine shader
+    var program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.log('Link program ERROR', gl.getProgramInfoLog(program));
+        return;
+    }
+
+
+    //triangle 
+    var verticies = [];
+    verticies[0] = [0.0, 0.0, 0.0];//A
+    verticies[1] = [0.0, 1.0, 0.0];//B
+    verticies[2] = [0.0, 0.0, 1.0];//C
+    verticies[3] = [1.0, 0.0, 1.0];//D
+
+    var face = [
+        verticies[0], verticies[1], verticies[2],//ABC
+        verticies[0], verticies[1], verticies[3],//ABD
+        verticies[1], verticies[2], verticies[3]//BCD  
+    ];
+
+    //buffer for GPU
+    const verticiesbuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticiesbuffer);
+    //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triVert), gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticies), gl.STATIC_DRAW);
+
+    const facebuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, facebuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Float32Array(face), gl.STATIC_DRAW);
+
+    var color = [
+        //ABC
+        [1, 0, 0, 1],  //R
+        [1, 0, 0, 1],  //R
+        [1, 0, 0, 1],  //R
+        //ABD
+        [0, 1, 0, 1],  //G
+        [0, 1, 0, 1],  //G
+        [0, 1, 0, 1],  //G
+        //BCD
+        [0, 0, 1, 1],  //B
+        [0, 0, 1, 1],  //B
+        [0, 0, 1, 1],  //B
+    ];
+
+
+    const colorbuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorbuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(color), gl.STATIC_DRAW);
+    //gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colorsArray), gl.STATIC_DRAW);
+    
+    var positionLoc = gl.getAttribLocation(program, 'vertPosition');
+    gl.vertexAttribPointer(
+        positionLoc,
+        3,//elements per attribute
+        gl.FLOAT,
+        gl.FALSE,
+        3 * Float32Array.BYTES_PER_ELEMENT, //size of individual vertex,(0=use the type above, usually 3)
+        0//skip
+    );
+    gl.enableVertexAttribArray(positionLoc);
+
+    var colorLoc = gl.getAttribLocation(program, 'vertColor');
+    gl.vertexAttribPointer(
+        colorLoc,
+        4,
+        gl.FLOAT,
+        gl.FALSE,
+        12 * Float32Array.BYTES_PER_ELEMENT,
+        0
+    );
+    gl.enableVertexAttribArray(colorLoc);
+    
+
+    //camera set up
+    gl.useProgram(program);
+    var matWorldUniformLocation = gl.getUniformLocation(program, 'worldMatrix');
+    var matViewUniformLocation = gl.getUniformLocation(program, 'viewMatrix');
+    var matProjUniformLocation = gl.getUniformLocation(program, 'projectionMatrix');
+
+    //var ViewMatrix = new Float32Array(16);
+    //var ProjMatrix = new Float32Array(16);
+    //glMatrix.mat4.identity(ProjMatrix);
+    //glMatrix.mat4.identity(ViewMatrix);
+    //save some lines right here 
+    const ProjMatrix = glMatrix.mat4.create();
+    const ViewMatrix = glMatrix.mat4.create();
+    const WorldMatrix = glMatrix.mat4.create();
+
+    //console.log(ProjMatrix);
+    //console.log(ViewMatrix);
+    glMatrix.mat4.identity(WorldMatrix);
+    glMatrix.mat4.lookAt(ViewMatrix, [0, 0, 5], [0, 0, 0], [0, 1, 0]);
+    glMatrix.mat4.perspective(ProjMatrix, glMatrix.glMatrix.toRadian(45), canvas.width / canvas.height, 0.1, 1000.0);
+
+
+    gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, WorldMatrix);
+    gl.uniformMatrix4fv(matViewUniformLocation, gl.FALSE, ViewMatrix);
+    gl.uniformMatrix4fv(matProjUniformLocation, gl.FALSE, ProjMatrix); 
+    
+    gl.drawArrays(gl.TRIANGLES, 0, 4);
+    //gl.drawElements(gl.LINES, lines.length, gl.UNSIGNED_SHORT, 0);
+
+    /*
+    //rotate
+   var identityMatrix = new Float32Array(16);
+    glMatrix.mat4.identity(identityMatrix);
+    var angle = 0;
+    var loop = function () {
+        angle = performance.now() / 1000 / 6 * 2 * Math.PI;
+        glMatrix.mat4.rotate(WorldMatrix, identityMatrix, angle, [0, 1, 0]);
+        gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, ViewMatrix);
+
+
+        gl.clearColor(0, 0, 0, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT)
+        gl.drawArrays(gl.TRIANGLES, 0, 12);
+
+        requestAnimationFrame(loop);
+
+    };
+    requestAnimationFrame(loop);*/
+ 
+
+
+    
+};
+
+/*
+       //front
+         0, 1, 0,    1, 0, 0,
+        -1, -1, 1,   1, 0, 0,
+         1, -1, 1,   1, 0, 0,
+        //back
+        0, 1, 0,     0, 1, 0,
+        1, -1, -1,   0, 1, 0,
+        -1, -1, -1,  0, 1, 0,
+        //left
+        0, 1, 0,     0, 0, 1,
+        -1, -1, -1,  0, 0, 1,
+        -1, -1, 1,   0, 0, 1,
+        //right
+        0, 1, 0,     1, 1, 0,
+        1, -1, 1,    1, 1, 0,
+        1, -1, -1,   1, 1, 0
+
+*/
+
+
+/*
+   var color = [
+        //front
+        1, 0, 0, 1,  //R//RGB
+        0, 1, 0, 1,  //G
+        0, 0, 1, 1,  //B
+        //1, 1, 0, 1,   //Yellow
+        //right
+        0, 1, 0, 1,  //R//RGB
+        0, 0, 1, 1,  //G
+        1, 0, 0, 1,  //B
+        //0, 1, 1, 1,   //Yellow
+        //back
+        0, 0, 1, 1,  //R//RGB
+        1, 0, 0, 1,  //G
+        0, 1, 0, 1,  //B
+        //1, 0, 1, 1,   //Yellow
+        //left
+        1, 0, 0, 1,  //R//RGB
+        0, 1, 0, 1,  //G
+        0, 0, 1, 1,  //B
+        //1, 1, 0, 1   //Yellow
+    ]
+ */
+
+/*color 
+     var color = [
+        //front
+        1, 0, 0, 1,  //R//RGB
+        1, 0, 0, 1,  //G
+        1, 0, 0, 1,  //B
+        //1, 1, 0, 1,   //Yellow
+        //right
+        0, 1, 0, 1,  //R//RGB
+        0, 1, 0, 1,  //G
+        0, 1, 0, 1,  //B
+        //0, 1, 1, 1,   //Yellow
+        //back
+        0, 0, 1, 1,  //R//RGB
+        0, 0, 1, 1,  //G
+        0, 0, 1, 1,  //B
+        //1, 0, 1, 1,   //Yellow
+        //left
+        1, 1, 0, 1,  //R//RGB
+        1, 1, 0, 1,  //G
+        1, 1, 0, 1  //B
+        //1, 1, 0, 1   //Yellow
+    ]
+ */
+
+
+/* 
+     var triVert = [
+        //front
+         0, 1, 0,
+        -1, -1, 1,
+        1, -1, 1,
+        //right
+        0, 1, 0,
+        1, -1, 1,
+        1, -1, -1,
+        //back
+        0, 1, 0,
+        1, -1, -1,
+        -1, -1, -1,
+        //left
+        0, 1, 0,
+        -1, -1, -1,
+        -1, -1, 1
+
+    ];
+ 
+ 
+ */
+
+/*
+     var lines = [
+        verticies[0], verticies[1], //AB
+        verticies[0], verticies[2], //AC
+        verticies[0], verticies[3], //AD
+        verticies[1], verticies[2], //BC
+        verticies[1], verticies[3], //BD
+        verticies[2], verticies[3], //CD
+    ];
+ 
+ */
+
+/*
+var color = [
+    //front
+    [1, 0, 0, 1],  //R
+    [0, 1, 0, 1],  //G
+    [0, 0, 1, 1],  //B
+    [1, 1, 0, 1]   //Y
+];
+
+    var colorsArray = [];
+    for (var i = 0; i < face.length; ++i) {
+        colorsArray.push(color[i]);
+    }
+
+    console.log(colorsArray);
+
+
+*/

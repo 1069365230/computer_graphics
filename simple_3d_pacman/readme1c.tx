@@ -1,0 +1,21 @@
+Finished tasks:
+FOUNDATIONS: 1+2
+GRAPHICAL ASPECTS: 1
+GAMING ASPECTS: 2(camera centers)
+
+Comments:
+This lab's implementation is based on my lab 1b. Most of the function are already implemented in 1b, but still need a lot of modification.
+
+The Sphere part is very tricky. I think how to implement a sphere on the plane is the most difficult part in this lab.
+I spend half of the time implementing the sphere using blender, and half of the time modify the program.
+I would say this lab is not as difficult as lab 1a, the concepts are there, only thing new is how to create stuff using blender, 
+which I really hope Willi could do a tutorial on that one.
+
+Excuses: Although I really love Pacman, my time was too limited, software engineering killed me. So I could not implement the extra functions. 
+
+
+
+OS of dev-computer: windows (DELL XPS)
+OS of test-computer: windows (Asus)
+browsers: Chrome 86.0.4240.111 64 bit
+
